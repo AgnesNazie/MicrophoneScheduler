@@ -2,9 +2,7 @@ package org.workshop.microphoneschedulerapi.domain.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.OnDelete;
@@ -31,16 +29,19 @@ public class Personage {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "actor_id")
     private Actor actor;
-    /*
-    @ManyToOne()
-    @OnDelete(action = OnDeleteAction.SET_NULL)
+
+    @ManyToOne
     @JoinColumn(name = "microphone_id")
-    private Microphone microphoneId;
-     */
-    /*
-    @ManyToMany(mappedBy = "characters", fetch = FetchType.EAGER) //, cascade = CascadeType.ALL)
-    private List<Scene> scenes;// = new ArrayList<>();
-     */
+    private Microphone microphone;
+
+    public Microphone getMicrophone() {
+        return microphone;
+    }
+
+    public void setMicrophone(Microphone microphone) {
+        this.microphone = microphone;
+    }
+
     //@JsonIgnore
     @JsonManagedReference
     @OneToMany(mappedBy = "personage", fetch = FetchType.EAGER)
