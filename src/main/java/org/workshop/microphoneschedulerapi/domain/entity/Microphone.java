@@ -24,4 +24,9 @@ public class Microphone {
     private int microphoneId;
     @Column(unique = true)
     private String microphoneName;
+
+
+    // track the actor currently assigned to this mic
+    @OneToOne(mappedBy = "currentMic")
+    private Actor assignedActor;
 }

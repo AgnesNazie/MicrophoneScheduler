@@ -2,10 +2,12 @@ package org.workshop.microphoneschedulerapi.controller;
 
 import jakarta.websocket.server.PathParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.microphoneschedulerapi.domain.dto.*;
+import org.workshop.microphoneschedulerapi.domain.entity.Actor;
 import org.workshop.microphoneschedulerapi.domain.entity.Play;
 import org.workshop.microphoneschedulerapi.service.AdminService;
 
@@ -35,6 +37,16 @@ public class AdminController {
         List<Play> plays = adminService.getAllPlays();
 
         return ResponseEntity.ok(plays);
+    }
+
+    @PostMapping("/createActor/{userId}")
+    public ResponseEntity<Actor> createActor(@PathVariable Long userId) {
+        try {
+            Actor actor = adminService.createActorForUser(userId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(actor);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     /**

@@ -6,6 +6,8 @@ import lombok.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -25,5 +27,11 @@ public class Actor {
     @JoinColumn(name = "user_id")
     private User user;
 
+    // Number of mic switches the actor has had
+    private int micSwitches = 0;
 
+    // Optional: Current microphone assigned
+    @OneToOne
+    @JoinColumn(name = "microphone_id")
+    private Microphone currentMic;
 }

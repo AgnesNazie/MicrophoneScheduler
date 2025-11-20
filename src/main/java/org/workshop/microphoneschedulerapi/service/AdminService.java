@@ -64,20 +64,17 @@ public class AdminService {
      */
     @Transactional
     public void deletePlay(String playName) {
-        List<Scene> scenesToBeRemoved = sceneRepository.findAllByPlay(playRepository.getReferenceById(playName));
+        Play play = playRepository.getReferenceById(playName);
+        List<Scene> scenesToBeRemoved = sceneRepository.findAllByPlay(play);
         for (Scene scene : scenesToBeRemoved) {
-            var toBeRemoved = scene.getScene_characters();
-            for (Scene_character scene_character : toBeRemoved) {
-                //personageRepository.delete(scene_character.getPersonage());
-                //scene_character.setPersonage(null);
-                //scene_character.setScene(null);
-                //scene_character.setMicrophone(null);
-                scene_characterRepository.delete(scene_character);
-            }
-            //scene.setScene_characters(null);
+            // Remove all Scene_character entries for this scene
+            scene.getScene_characters().clear();  // orphanRemoval = true will delete from DB automatically
         }
-        sceneRepository.deleteAllByPlay(playRepository.getReferenceById(playName));
-        playRepository.delete(playRepository.getReferenceById(playName));
+
+        // Delete all scenes
+        sceneRepository.deleteAllByPlay(play);
+        // Finally delete the play
+        playRepository.delete(play);
     }
 
     public void updatePlay(String playName, LocalDate date, String description) {
@@ -139,7 +136,7 @@ public class AdminService {
     @Transactional
     public void addPersonageToScene(int sceneId, int personageId) throws Exception {
         Scene scene = sceneRepository.findSceneBySceneId(sceneId);
-        List<Scene_character> sceneCharacters = scene.getScene_characters();
+        List<Scene_character> sceneCharacters = scene.getScene_characters();;
         Personage character = personageRepository.findById(personageId).orElseThrow();
 
         if(personageRepository.findById(personageId).isPresent()) {
@@ -791,5 +788,23 @@ public class AdminService {
             sc.setMicrophone(microphoneRepository.getReferenceById(element.getMicrophoneId()));
             scene_characterRepository.save(sc);
         }
+    }
+
+    @Transactional
+    public Actor createActorForUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+        // Check if an actor already exists for this user
+        if (actorRepository.existsByUser(user)) {
+            throw new RuntimeException("Actor already exists for this user");
+        }
+
+        Actor actor = Actor.builder()
+                .user(user)
+                .micSwitches(0) // or any default value
+                .build();
+
+        return actorRepository.save(actor);
     }
 }

@@ -8,6 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -22,9 +23,11 @@ public class Personage {
     @NonNull
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    //@Column(nullable = false, unique = true)
+
     private int personageId;
-    @JsonBackReference
+
+    private String personageName;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "actor_id")
@@ -34,19 +37,7 @@ public class Personage {
     @JoinColumn(name = "microphone_id")
     private Microphone microphone;
 
-    public Microphone getMicrophone() {
-        return microphone;
-    }
+    @OneToMany(mappedBy = "personage", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Scene_character> scene_characters = new ArrayList<>();
 
-    public void setMicrophone(Microphone microphone) {
-        this.microphone = microphone;
-    }
-
-    //@JsonIgnore
-    @JsonManagedReference
-    @OneToMany(mappedBy = "personage", fetch = FetchType.EAGER)
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    private List<Scene_character> scene_characters;
-    @Column(unique = true)
-    private String personageName;
 }
