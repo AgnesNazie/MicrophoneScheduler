@@ -19,6 +19,9 @@ public interface Scene_characterRepository extends JpaRepository<Scene_character
 
     boolean existsScene_charactersByPersonage(Personage personage);
 
+    //  count scenes for the table
+    int countByPersonage_PersonageId(int personageId);
+
 
     //@Query(value="select s.scene_character_id from Scene_character s where s.scene.play.playName = :playName")
     //List<Scene_character> findAllScene_charactersByPlay(Play play);

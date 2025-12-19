@@ -28,6 +28,8 @@ public interface  SceneRepository extends JpaRepository<Scene, Integer> {
 
     void deleteAllByPlay(Play play);
 
+    int countByPlayAndActNumber(Play play, int actNumber);
+
     @Query(value="select s.sceneId from Scene s where s.play.playName = :playName")
     List<Integer> findSceneIdsByPlayName(@NonNull String playName);
 

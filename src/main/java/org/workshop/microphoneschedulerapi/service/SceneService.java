@@ -151,21 +151,21 @@ public class SceneService {
 
     public void assignMicrophone(Long sceneCharacterId, int microphoneId) {
 
-        Personage personage = personageRepository.findById(sceneCharacterId.intValue())
-                .orElseThrow(() -> new RuntimeException("SceneCharacter not found"));
+        Scene_character sc = scene_characterRepository.findById(sceneCharacterId)
+                .orElseThrow(() -> new RuntimeException("SceneCharacter not found" +  + sceneCharacterId));
 
         Microphone microphone = microphoneRepository.findById(microphoneId)
-                .orElseThrow(() -> new RuntimeException("Microphone not found"));
+                .orElseThrow(() -> new RuntimeException("Microphone not found" + microphoneId));
 
-        personage.setMicrophone(microphone);
-        personageRepository.save(personage);
+        sc.setMicrophone(microphone);
+        scene_characterRepository.save(sc);
     }
 
     public void removeMicrophone(Long sceneCharacterId) {
-        Personage personage = personageRepository.findById(sceneCharacterId.intValue())
-                .orElseThrow(() -> new RuntimeException("SceneCharacter not found"));
+       Scene_character sc  = scene_characterRepository.findById(sceneCharacterId)
+                .orElseThrow(() -> new RuntimeException("SceneCharacter not found" + sceneCharacterId));
 
-        personage.setMicrophone(null);
-        personageRepository.save(personage);
+        sc.setMicrophone(null);
+        scene_characterRepository.save(sc);
     }
 }

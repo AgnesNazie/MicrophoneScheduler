@@ -83,6 +83,10 @@ public class AdminService {
 
     public SceneCustomListDTO getAllScenesInPlay(String playName) {
         List<Scene> scenes = sceneRepository.findAllByPlay(playRepository.getReferenceById(playName));
+        scenes.sort(Comparator
+                .comparing(Scene::getActNumber)
+                .thenComparing(Scene::getSceneNumber));
+
         SceneCustomListDTO sceneCustomListDTO = new SceneCustomListDTO();
         List<Scene> scenesInPlay = new ArrayList<>();
         for (Scene scene : scenes) {
@@ -136,25 +140,28 @@ public class AdminService {
     @Transactional
     public void addPersonageToScene(int sceneId, int personageId) throws Exception {
         Scene scene = sceneRepository.findSceneBySceneId(sceneId);
-        List<Scene_character> sceneCharacters = scene.getScene_characters();;
-        Personage character = personageRepository.findById(personageId).orElseThrow();
+        Personage character = personageRepository.findById(personageId).orElseThrow(()
+                -> new Exception("Personage not found"));
 
-        if(personageRepository.findById(personageId).isPresent()) {
-            Personage personage = personageRepository.findById(personageId).get();
-            if(!personage.getScene_characters().isEmpty()) {
-                if(personage.getScene_characters().get(0).getScene() != null) {
-                    Play play = playRepository.getReferenceById(sceneRepository.findSceneBySceneId(sceneId).getPlay().getPlayName());
-                    if(!personage.getScene_characters().get(0).getScene().getPlay().equals(play)) {
-                        throw new Exception("Character used in other production already");
-                    }
-                }
+        // Check if character is used in other productions
+        Play currentPlay = scene.getPlay();
+        for (Scene_character sc : character.getScene_characters()) {
+            Scene otherScene = sc.getScene();
+            if (otherScene != null && !otherScene.getPlay().getPlayName().equals(currentPlay.getPlayName())) {
+                throw new Exception("Character used in other production already");
             }
+            // It's fine if the scene is from the same play
         }
 
-        for(Scene_character scene_character : sceneCharacters) {
+
+        for(Scene_character scene_character :scene.getScene_characters() ) {
+
+            // Prevent the same character from being added twice in the same scene
             if(scene_character.getPersonage().getPersonageId() == personageId) {
                 throw new Exception("Character already in scene");
             }
+
+            // Prevent the same actor from being in two roles in the same scene
             if(scene_character.getPersonage().getActor() != null && character.getActor() != null) {
                 if(scene_character.getPersonage().getActor().getActorId() == character.getActor().getActorId()) {
                     throw new Exception("Actor already in scene");
@@ -162,13 +169,15 @@ public class AdminService {
             }
         }
 
+        // Create and add new Scene_character
+
         Scene_character scene_character = Scene_character.builder()
                 .scene(scene)
                 .personage(personageRepository.findById(personageId).orElseThrow())
                 .build();
 
-        sceneCharacters.add(scene_character);
-        scene.setScene_characters(sceneCharacters);
+        scene.getScene_characters().add(scene_character);
+        scene.setScene_characters(scene.getScene_characters());
         scene_characterRepository.save(scene_character);
 
         /*
@@ -243,62 +252,56 @@ public class AdminService {
         List<PersonageCustom> customList = new ArrayList<>();
         List<Personage> personages = personageRepository.findAll();
         for (Personage personage : personages) {
+
+            // ALWAYS fetch from repository (not from entity)
+            List<Scene_character> scRows =
+                    scene_characterRepository.findScene_charactersByPersonage(personage);
+
+            // Sort scenes correctly (Act -> Scene)
+            scRows.sort(Comparator
+                    .comparing((Scene_character sc) -> sc.getScene().getActNumber())
+                    .thenComparing(sc -> sc.getScene().getSceneNumber()));
+
+            // Build unique scene list
             List<Scene> customScenes = new ArrayList<>();
+            Set<Integer> seen = new HashSet<>();
 
-            for (Scene_character scene_character : personage.getScene_characters()) {
-                Scene customScene = Scene.builder()
-                        .sceneId(scene_character.getScene().getSceneId())
-                        .actNumber(scene_character.getScene().getActNumber())
-                        .sceneNumber(scene_character.getScene().getSceneNumber())
-                        .sceneName(scene_character.getScene().getSceneName())
-                        .build();
-                customScenes.add(customScene);
-            }
-            if(personage.getActor() != null) {
-                if (scene_characterRepository.existsScene_charactersByPersonage(personage)) {
-                    PersonageCustom customPerson = PersonageCustom.builder()
-                            .personageId(personage.getPersonageId())
-                            .personageName(personage.getPersonageName())
-                            .playName(personage.getScene_characters().get(0).getScene().getPlay().getPlayName())
-                            .actorName(actorRepository.findById(personage.getActor().getActorId()).orElseThrow().getUser().getUsername())
-                            .scenes(customScenes)
+            for (Scene_character scene_character : scRows) {
+                if (scene_character.getScene() == null) continue;
+                int sid = scene_character.getScene().getSceneId();
+                if (seen.add(sid)) {
+                    Scene customScene = Scene.builder()
+                            .sceneId(scene_character.getScene().getSceneId())
+                            .actNumber(scene_character.getScene().getActNumber())
+                            .sceneNumber(scene_character.getScene().getSceneNumber())
+                            .sceneName(scene_character.getScene().getSceneName())
                             .build();
-                    customList.add(customPerson);
-                } else {
-                    PersonageCustom customPerson = PersonageCustom.builder()
-                            .personageId(personage.getPersonageId())
-                            .personageName(personage.getPersonageName())
-                            .actorName(actorRepository.findById(personage.getActor().getActorId()).orElseThrow().getUser().getUsername())
-                            .scenes(customScenes)
-                            .build();
-                    customList.add(customPerson);
-                }
-            }
-            else{
-                if (scene_characterRepository.existsScene_charactersByPersonage(personage)) {
-                    PersonageCustom customPerson = PersonageCustom.builder()
-                            .personageId(personage.getPersonageId())
-                            .personageName(personage.getPersonageName())
-                            .playName(personage.getScene_characters().get(0).getScene().getPlay().getPlayName())
-                            .actorName(null)
-                            .scenes(customScenes)
-                            .build();
-                    customList.add(customPerson);
-                } else {
-                    PersonageCustom customPerson = PersonageCustom.builder()
-                            .personageId(personage.getPersonageId())
-                            .personageName(personage.getPersonageName())
-                            .actorName(null)
-                            .scenes(customScenes)
-                            .build();
-                    customList.add(customPerson);
+                    customScenes.add(customScene);
                 }
             }
 
+            // Get play name if personage appears in at least one scene
+            String playName = scRows.isEmpty()
+                    ? null
+                    : scRows.get(0).getScene().getPlay().getPlayName();
+
+            PersonageCustom custom = PersonageCustom.builder()
+                    .personageId(personage.getPersonageId())
+                    .personageName(personage.getPersonageName())
+                    .actorName(personage.getActor() == null
+                            ? null
+                            : personage.getActor().getUser().getUsername())
+                    .playName(playName)
+                    .scenes(customScenes)
+                    .build();
+
+            customList.add(custom);
         }
-        personageInDbCustomDTO.setPersonages(customList);
 
+        personageInDbCustomDTO.setPersonages(customList);
         return personageInDbCustomDTO;
+
+
     }
 
     /*
@@ -603,6 +606,10 @@ public class AdminService {
 
     public List<CustomScenePersonageDTO> getCustomScenePersonages(String playName) {
         List<Scene> scenes = sceneRepository.findAllByPlay(playRepository.getReferenceById(playName));
+        scenes.sort(Comparator
+                .comparing(Scene::getActNumber)
+                .thenComparing(Scene::getSceneNumber));
+
         List<CustomScenePersonageDTO> customScenePersonageDTOs = new ArrayList<>();
         for (Scene scene : scenes) {
             List<Personage> personages = new ArrayList<>();
@@ -633,13 +640,18 @@ public class AdminService {
 
     public void addAct(String playName, int act, int scenes){
         Play play = playRepository.getReferenceById(playName);
+
+        // Count how many scenes already exist in THIS act
+        int existingScenesInAct = sceneRepository.countByPlayAndActNumber(play, act);
+
         for(int i = 0; i < scenes; i++){
+
             Scene scene = Scene.builder()
                     .play(play)
                     .actNumber(act)
-                    .sceneNumber(i + 1)
-                    .sceneName("Act" + act + " / Scene" + (i + 1))
-                    .build();
+                    .sceneNumber(existingScenesInAct + i + 1)
+                    .sceneName("Act" + act + " / Scene" + (existingScenesInAct + i + 1))
+                     .build();
             sceneRepository.save(scene);
         }
     }
